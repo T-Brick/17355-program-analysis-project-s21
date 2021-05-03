@@ -1,12 +1,10 @@
 open Core
 open While3addr.Lang
 
-type edge = Direct | CondT | CondF | NoEdge
+type edge = Direct | NoEdge
 
 let string_of_edge = function
   | Direct -> "Direct"
-  | CondT -> "True"
-  | CondF -> "False"
   | NoEdge -> ""
 
 module Pair = struct
@@ -97,8 +95,6 @@ let of_prog (_, listing) = of_listing listing
 let show cfg =
   let rec show_list = function
     | (n, Direct) :: rest -> Printf.sprintf "%d; %s" n (show_list rest)
-    | (n, CondT) :: rest -> Printf.sprintf "%d (T); %s" n (show_list rest)
-    | (n, CondF) :: rest -> Printf.sprintf "%d (F); %s" n (show_list rest)
     | (_, NoEdge) :: rest -> show_list rest
     | _ -> ""
   in
