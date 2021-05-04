@@ -24,8 +24,8 @@ end
 module PairMap = Map.Make(Pair)
 
 type t =
-  { nodes : instr Int.Map.t;
-    edges : edge PairMap.t;
+  { nodes : instr Int.Map.t; (* line numbers -> instructions *)
+    edges : edge PairMap.t; (* pairs of line numbers -> edge type *)
   }
 
 let find cfg edge =
@@ -74,14 +74,6 @@ let of_listing listing =
         PairMap.set ~key:(loc1, loc2) ~data:kind edges
       in
       match instr with
-      | Goto target ->
-         add_edge edges ~edge:(cur_loc, target) ~kind:Direct
-      | IfGoto (_, _, target) ->
-         let edges = add_edge edges ~edge:(cur_loc, target) ~kind:CondT in
-         if not_last then
-           add_edge edges ~edge:(cur_loc, next_loc) ~kind:CondF
-         else
-           edges
       | _ when not_last ->
          add_edge edges ~edge:(cur_loc, next_loc) ~kind:Direct
       | _ -> edges
