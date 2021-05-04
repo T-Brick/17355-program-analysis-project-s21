@@ -11,8 +11,8 @@ For example, `ocamlc -I +compiler-libs ocamlcommon.cma ast_test.ml`
 
 ## File Structure
 - `ast_conversion.ml`: takes in OCaml code and converts it to our simplified language AST, then to a `listing`, then to a CFG to run analysis on
-- `lang-def.ml`: defines our simplified AST
-- `cfg.ml`: defines functions related to creation and use of the CFG
+- `lang-def.ml`: defines our simplified AST (adapted from `hw3`)
+- `cfg.ml`: defines functions related to creation and use of the CFG (adapted from `hw3`)
 - `ast_test.ml`: used for printing out OCaml ASTs for testing
 
 ## Language Subset
