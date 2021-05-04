@@ -1,3 +1,4 @@
+open Core
 open Printf
 
 (* creates and prints the AST for the ocaml code *)
@@ -31,8 +32,10 @@ let convert_astexpr e =
             | (Lident "/", [(_, e1), (_, e2)]) -> Div (convert_astexpr e1, convert_astexpr e2)
             | (Lident f, [(_, arg)]) -> App (Var f, convert_astexpr arg)
             | _ -> raise Failure "not handled"
+        (* application of lambda *)
         | (Pexp_fun _, [(_, arg)]) -> App (convert_astexpr e, convert_astexpr arg)
         | _ -> raise Failure "not handled"
+    (* lambda value *)
     | Pexp_fun (_, _, p, e) -> Lam (pat_to_var p, convert_astexpr e)
     | _ -> raise Failure "not handled"
 
@@ -44,14 +47,21 @@ let convert_binding b =
   
 (* convert structure_item_desc to instr *)
 let convert_struct_item_desc = function
-  | Pstr_value (Nonrecursive, [binding]) ->  convert_binding bindin
-  | _ -> raise Failure "todo"
+  | Pstr_value (Nonrecursive, [binding]) ->  convert_binding binding
+  | _ -> raise Failure "not handled"
 
-(* convert structure_item to instr *)
-let convert_struct_item i =
-  let _ = i.pstr_desc
+(* add structure_item to accumulator *)
+let convert_struct_item (i, cur_map) s =
+  let res = convert_struct_item_desc (s.pstr_desc) in
+  let new_map = Int.Map.add i res cur_map in
+  (i + 1, new_map)
 
 (* convert phrase to instr map *)
-let convert_phrase = function
-  | Ptop_def s -> List.fold ...
+let convert_phrase (i, cur_map) = function
+  | Ptop_def s -> List.fold_left convert_struct_item cur_map s
   | Ptop_dir _ -> raise Failure "not handled"
+
+(* convert phrase list to instr map *)
+let convert_phrase_list ps =
+  let init : int * instr Int.Map.t = (0, Int.Map.empty) in
+  List.fold_left convert_phrase init ps
