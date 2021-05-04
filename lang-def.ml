@@ -17,7 +17,7 @@ type expr =
 type instr =
   | Assign of id * expr
 
-type listing = instr Int.Map.t
+type listing = instr Int.Map.t (* map from line numbers to instructions *)
 
 type program = int * listing
 
