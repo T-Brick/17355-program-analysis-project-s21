@@ -1,6 +1,6 @@
 open Printf
 
-(* prints the AST for the ocaml code *)
+(* creates and prints the AST for the ocaml code *)
 let e = "let x = 100 + 50"
 let lexBuf = Lexing.from_string e
 let parseTree = Parse.use_file (lexBuf)
