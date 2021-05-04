@@ -1,4 +1,4 @@
-Uses the ocaml compiler-libs to parse ocaml expressions into an AST. We then construct a control flow graph from the AST.
+Uses the ocaml compiler-libs to parse ocaml expressions into an AST. We then convert the ocaml AST into our simplified AST. We then convert our simplified AST into a CFG, which we run constant analysis on.
 
 We use Ocaml version 4.09.0
 
