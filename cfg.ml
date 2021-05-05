@@ -1,5 +1,6 @@
 open Core
-open While3addr.Lang
+(* todo fix maybe idk *)
+open Lang_def
 
 type edge = Direct | NoEdge
 
