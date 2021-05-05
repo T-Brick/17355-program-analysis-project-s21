@@ -54,6 +54,7 @@ let sub_var (x:id) (y:id) (e:expr) =
     | Mul (e1, e2) -> Mul (sub_var x y e1, sub_var x y e2)
     | Div (e1, e2) -> Div (sub_var x y e1, sub_var x y e2)
 
+(* e1 \cong e2 *)
 let expr_equal e1 e2 =
   match (e1, e2) with
     | (Var x, Var y) -> x = y
@@ -64,3 +65,4 @@ let expr_equal e1 e2 =
     | (Sub (n1, n2), Sub (m1, m2)) -> (expr_equal n1 m1) and (expr_equal n2 m2)
     | (Mul (n1, n2), Mul (m1, m2)) -> (expr_equal n1 m1) and (expr_equal n2 m2)
     | (Div (n1, n2), Div (m1, m2)) -> (expr_equal n1 m1) and (expr_equal n2 m2)
+    | _ -> false
