@@ -39,11 +39,11 @@ let convert_astexpr e =
     | Pexp_fun (_, _, p, e) -> Lam (pat_to_var p, convert_astexpr e)
     | _ -> raise Failure "not handled"
 
-(* convert binding to Assign instr *)
+(* convert binding to Bind instr *)
 let convert_binding b =
   let id = pat_to_var (b.pvb_pat) in
   let exp = convert_astexpr (b.pvb_expr) in
-  Assign (id, exp)
+  Bind (id, exp)
   
 (* convert structure_item_desc to instr *)
 let convert_struct_item_desc = function

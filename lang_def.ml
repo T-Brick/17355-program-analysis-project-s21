@@ -15,7 +15,7 @@ type expr =
   | Div of expr * expr
 
 type instr =
-  | Assign of id * expr
+  | Bind of id * expr
 
 type listing = instr Int.Map.t (* map from line numbers to instructions *)
 
@@ -32,7 +32,7 @@ let string_of_expr = function
   | Div (e1, e2) -> Format.sprintf "%s / %s" (string_of_expr e1) (string_of_expr e2)
 
 let string_of_instr i = function
-  | Assign (v, e) -> Format.sprintf "%d: %s := %s" i v (string_of_expr e)
+  | Bind (v, e) -> Format.sprintf "%d: %s := %s" i v (string_of_expr e)
 
 let string_of_listing listing =
   Int.Map.fold_right listing ~init:[]
