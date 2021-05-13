@@ -68,4 +68,15 @@ let sigma_ne (state1 : sigma) (state2 : sigma) : bool =
   not (String.Map.equal (dom_equal) state1 state2)
     
 let flow (state : sigma) (code : instr) (e_type : Cfg.edge): sigma =
-  raise Failure "Not implemented"
+  match code with
+    | Bind (x, e) -> String.Map.set state ~key:x ~data:(
+      match e with
+        | Var y   -> String.Map.find_exn state y
+        | Const _ -> Constant e
+        | Lam _   -> Constant e
+        | App _   -> Top (* todo: the rest of these *)
+        | Add _   -> Top 
+        | Sub _   -> Top 
+        | Mul _   -> Top 
+        | Div _   -> Top 
+    )
