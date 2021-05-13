@@ -66,6 +66,32 @@ let join_values (v1 : domain) (v2 : domain) =
 
 let sigma_ne (state1 : sigma) (state2 : sigma) : bool =
   not (String.Map.equal (dom_equal) state1 state2)
+
+(* reduces an expression to a domain given a state *)
+let reduce (state : sigma) (e : expr) : domain = 
+  (* helper function for reducing binary operators *)
+  let binOpReduce (f : int -> int -> int) (e1, e2) =
+    match (reduce state e1, reduce state e2) =
+      | (Top, _) | (_, Top) -> Top
+      | (Bot, x) -> x
+      | (x, Bot) -> x
+      | (Constant (Const n1), Constant (Const n2)) -> Constant (Const (f n1 n2))
+      | _ -> Bot (* malformed *)
+  in 
+  match e with
+    | Var x -> String.Map.find_exn state x
+    | Const n -> Constant e
+    | Lam (y, e') -> (
+      match (reduce (String.Map.set state ~key:y ~data:Top) e') with
+        | Top -> Constant e (* no simplication possible *)
+        | Bot -> Constant e (* likewise *)
+        | Constant re' -> Constant (Lam(y, re')) )
+    | App (Lam (y, e'), e'') -> reduce (String.Map.set state ~key:y ~data:(reduce state e'')) e'
+    | App (_, _) -> Bot            (* malformed, application must be on lambda *)
+    | Add e' -> binOpReduce (+) e'
+    | Sub e' -> binOpReduce (-) e'
+    | Mul e' -> binOpReduce ( * ) e'
+    | Div e' -> binOpReduce (/) e'
     
 let flow (state : sigma) (code : instr) (e_type : Cfg.edge): sigma =
   match code with
@@ -73,10 +99,10 @@ let flow (state : sigma) (code : instr) (e_type : Cfg.edge): sigma =
       match e with
         | Var y   -> String.Map.find_exn state y
         | Const _ -> Constant e
-        | Lam _   -> Constant e
-        | App _   -> Top (* todo: the rest of these *)
-        | Add _   -> Top 
-        | Sub _   -> Top 
-        | Mul _   -> Top 
-        | Div _   -> Top 
-    )
+        | Lam _   -> reduce state e
+        | App _   -> reduce state e 
+        | Add _   -> reduce state e  
+        | Sub _   -> reduce state e  
+        | Mul _   -> reduce state e  
+        | Div _   -> reduce state e  
+      )
