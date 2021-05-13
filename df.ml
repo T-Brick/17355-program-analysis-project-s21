@@ -63,8 +63,16 @@ let join_values (v1 : domain) (v2 : domain) =
     | (x, Bot) -> x 
     | (Constant e1, Constant e2) -> if expr_equal e1 e2 then Constant e1 else Top
 
+let join (s1 : sigma) (s2 : sigma) : sigma =
+  String.Map.merge s1 s2 
+    ~f:(fun ~key:_ -> function
+    | `Left _ | `Right _ -> failwith "States contain different number of variables!"
+    | `Both (v1, v2) -> Some (join_values v1 v2))
+
 let sigma_ne (state1 : sigma) (state2 : sigma) : bool =
   not (String.Map.equal (dom_equal) state1 state2)
+
+let (!=) = sigma_ne
 
 (* swap out known bindings in an expression. This means that shadowing
   later wont make certain functions equal when they shouldn't be *)
@@ -121,3 +129,45 @@ let flow (state : sigma) (code : instr) (e_type : edge): sigma =
         | Mul _   -> reduce state e  
         | Div _   -> reduce state e  
       )
+
+(* This initializes a state for the cfg by mapping all variables to the passed in abstract value *)      
+let initializeSigma (cfg: t) (value: domain) : sigma = 
+  let nodes = Int.Map.keys cfg.nodes in 
+  let add_var (s) (n) =
+    match (Int.Map.find_exn cfg.nodes n) with
+    | Bind (x, _) -> String.Map.set s ~key:x ~data:value
+  in
+  List.fold nodes ~init:(String.Map.empty) ~f:(add_var)
+
+(*
+  Loops through all the successor edges, computing the flow and adding them to worklist if needed.
+ *)
+  let rec next (ns : lineno list) (inputs : df_results) (fl) = function
+  | [] -> inputs, ns
+  | (j, e)::s ->
+    let inputj = Int.Map.find_exn inputs j in
+    let newInput = join (inputj) (fl e) in
+      if newInput != inputj 
+      then next (j::ns) (Int.Map.set inputs ~key:j ~data:newInput) (fl) s
+      else next ns inputs fl s
+
+let kildall (cfg : t) : df_results =
+  let rec work (inputs : df_results) = function
+    | [] -> inputs (* while worklist is not empty *)
+    | n :: ns -> (* take node n off of the worklist *)
+       let instr_n = Int.Map.find_exn cfg.nodes n in
+       (* find_exn throws an exception if the key is not found in the map.
+        * Because of how this algorithm works, we should always have an input
+        * state of some kind for any node we're pulling off the worklist, so if
+        * this throws an exception something has gone wrong *)
+       let input_n = Int.Map.find_exn inputs n in
+       let inputs', worklist' = next ns inputs (flow input_n instr_n) (outgoing cfg n)
+       in work inputs' worklist'
+  in
+  (* This initializes the inputMap, mapping every variable to Top for the first instruction
+     in the code/node in the graph, and mapping every variable to Bot for the rest of the nodes. *)
+  let botSigma = initializeSigma (cfg) (Bot) in
+  let topSigma = initializeSigma (cfg) (Top) in
+  let inputMap = Int.Map.map cfg.nodes ~f:(fun k -> botSigma) in
+  let inputMap = Int.Map.set inputMap ~key:1 ~data: topSigma in
+  work (inputMap) (List.sort (Int.Map.keys cfg.nodes) ~compare:Int.compare)
