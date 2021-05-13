@@ -71,7 +71,7 @@ let sigma_ne (state1 : sigma) (state2 : sigma) : bool =
 let reduce (state : sigma) (e : expr) : domain = 
   (* helper function for reducing binary operators *)
   let binOpReduce (f : int -> int -> int) (e1, e2) =
-    match (reduce state e1, reduce state e2) =
+    match (reduce state e1, reduce state e2) with
       | (Top, _) | (_, Top) -> Top
       | (Bot, x) -> x
       | (x, Bot) -> x
