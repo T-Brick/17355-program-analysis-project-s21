@@ -6,7 +6,7 @@ let e = "let x = 100 + 50"
 let lexBuf = Lexing.from_string e
 let parseTree = Parse.use_file (lexBuf)
 let printer = (fun x -> Pprintast.top_phrase (Format.std_formatter) x ; printf "\n")
-let _ = List.map printer parseTree
+let _ = List.map parseTree printer
 
 (* convert pattern to variable *)
 let pat_to_var p =
@@ -15,7 +15,7 @@ let pat_to_var p =
     | _ -> raise Failure "not handled"
 
 (* convert AST expression to lang expression *)
-let convert_astexpr e =
+let rec convert_astexpr e =
   match e.pexp_desc with
     | Pexp_ident c ->
       match c.txt with

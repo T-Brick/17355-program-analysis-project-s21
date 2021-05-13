@@ -15,6 +15,7 @@ type expr =
   | Div of expr * expr
   (* (* Potential things to add *)
   | Bool of bool
+  | Not of expr
   | Eq of expr * expr         (* e1 = e2 *)
   | Gt of expr * expr         (* e1 > e2 *)
   | Lt of expr * expr         (* e1 < e2 *)
@@ -33,7 +34,7 @@ type listing = instr Int.Map.t (* map from line numbers to instructions *)
 
 type program = int * listing
 
-let string_of_expr = function
+let rec string_of_expr = function
   | Var v -> Format.sprintf "%s" v
   | Const n -> Format.sprintf "%d" n
   | App (e1, e2) -> Format.sprintf "%s %s" (string_of_expr e1) (string_of_expr e2)
@@ -55,21 +56,21 @@ let string_of_program (pc, listing) =
   Format.sprintf "PC: %d\nListing:\n%s" pc (string_of_listing listing)
 
 (* [x/y]e *)
-let sub_var (x:id) (y:id) (e:expr) =
+let rec sub_var (x:id) (y:id) (e:expr) =
   match e with
-    | Var i -> if y = i then Var x else e
+    | Var i -> if Poly.(=) y i then Var x else e
     | Const i -> e
     | App (e1, e2) -> App (sub_var x y e1, sub_var x y e2)
-    | Lam (z, e1) -> if y = z then Lam (x, sub_var x y e1) else Lam (z, sub_var x y e1)
+    | Lam (z, e1) -> if Poly.(=) y z then Lam (x, sub_var x y e1) else Lam (z, sub_var x y e1)
     | Add (e1, e2) -> Add (sub_var x y e1, sub_var x y e2)
     | Sub (e1, e2) -> Sub (sub_var x y e1, sub_var x y e2)
     | Mul (e1, e2) -> Mul (sub_var x y e1, sub_var x y e2)
     | Div (e1, e2) -> Div (sub_var x y e1, sub_var x y e2)
 
 (* e1 \cong e2 *)
-let expr_equal e1 e2 =
+let rec expr_equal e1 e2 =
   match (e1, e2) with
-    | (Var x, Var y) -> x = y
+    | (Var x, Var y) -> Poly.(=) x y
     | (Const i, Const j) -> i = j
     | (App (n1, n2), App (m1, m2)) -> (expr_equal n1 m1) && (expr_equal n2 m2)
     | (Lam (x, r), Lam (y, t)) -> expr_equal r (sub_var x y t)
