@@ -16,6 +16,17 @@ For example, `ocamlc -I +compiler-libs ocamlcommon.cma ast_test.ml`
 - `ast_test.ml`: used for printing out OCaml ASTs for testing
 - `df.ml` : defines the domain, state, and the actual flow (partially adapted from `hw3`)
 
+## Running
+
+To run in `utop` simply run the following at the start (make sure that Core is properly installed and available first):
+```
+#load "compiler-libs/ocamlcommon.cma";;
+#use "lang_def.ml";;
+#use "cfg.ml";;
+#use "ast_conversion.ml";;
+#use "df.ml";;
+```
+
 ## Language Subset
 Currently, we only handle OCaml programs that take the form of multiple
 `let` declarations in a row, which bind singular variables. As for expressions, we only handle constants, integer variables, basic integer operations (addition, subtraction, multiplication, division), lambda values that take in a singular variable argument, and application of such lambda values.
