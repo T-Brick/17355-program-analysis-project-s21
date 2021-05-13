@@ -66,6 +66,23 @@ let join_values (v1 : domain) (v2 : domain) =
 let sigma_ne (state1 : sigma) (state2 : sigma) : bool =
   not (String.Map.equal (dom_equal) state1 state2)
 
+(* swap out known bindings in an expression. This means that shadowing
+  later wont make certain functions equal when they shouldn't be *)
+let rec subst_state (state : sigma) (e : expr) : expr =
+  match e with
+    | Var x -> (
+      match String.Map.find state x with
+        | Some (Constant e') -> e'
+        | _ -> e
+    )
+    | Const n -> e
+    | Lam (y, e') -> Lam (y, subst_state state e')
+    | App (e1, e2) -> App (subst_state state e1, subst_state state e2)
+    | Add (e1, e2) -> Add (subst_state state e1, subst_state state e2)
+    | Sub (e1, e2) -> Sub (subst_state state e1, subst_state state e2)
+    | Mul (e1, e2) -> Mul (subst_state state e1, subst_state state e2)
+    | Div (e1, e2) -> Div (subst_state state e1, subst_state state e2)
+
 (* reduces an expression to a domain given a state *)
 let rec reduce (state : sigma) (e : expr) : domain = 
   match e with
@@ -73,8 +90,8 @@ let rec reduce (state : sigma) (e : expr) : domain =
     | Const n -> Constant e
     | Lam (y, e') -> (
       match (reduce (String.Map.set state ~key:y ~data:Top) e') with
-        | Top -> Constant e (* no simplication possible *)
-        | Bot -> Constant e (* likewise *)
+        | Top -> Constant (subst_state state e)
+        | Bot -> Constant (subst_state state e)
         | Constant re' -> Constant (Lam(y, re')) )
     | App (Lam (y, e'), e'') -> reduce (String.Map.set state ~key:y ~data:(reduce state e'')) e'
     | App (_, _) -> Bot            (* malformed, application must be on lambda *)
