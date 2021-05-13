@@ -6,3 +6,11 @@ let lexBuf = Lexing.from_string e
 let parseTree = Parse.use_file (lexBuf)
 let printer = (fun x -> Printast.top_phrase (Format.std_formatter) x ; printf "\n")
 let _ = List.map printer parseTree
+
+let _ = printf "\n\n\n\n\n"
+
+let e = "type test =\n| Int of int\n| String of string"
+let lexBuf = Lexing.from_string e
+let parseTree = Parse.use_file (lexBuf)
+let printer = (fun x -> Printast.top_phrase (Format.std_formatter) x ; printf "\n")
+let _ = List.map printer parseTree

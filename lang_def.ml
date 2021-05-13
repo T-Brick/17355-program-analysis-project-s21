@@ -13,10 +13,22 @@ type expr =
   | Sub of expr * expr
   | Mul of expr * expr
   | Div of expr * expr
+  (* (* Potential things to add *)
+  | Bool of bool
+  | Eq of expr * expr         (* e1 = e2 *)
+  | Gt of expr * expr         (* e1 > e2 *)
+  | Lt of expr * expr         (* e1 < e2 *)
+  | IfE of expr * expr * expr (* if e1 then e2 else e3 *)
+  | Let of id * expr * expr   (* let x = e1 in e2 *)
+  | Letr of id * expr * expr  (* let rec x = e1 in e2 *)
+  *)
 
 type instr =
   | Bind of id * expr
-
+  (*
+  | Type of id * ?
+  *)
+  
 type listing = instr Int.Map.t (* map from line numbers to instructions *)
 
 type program = int * listing
