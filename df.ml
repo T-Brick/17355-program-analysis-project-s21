@@ -1,6 +1,6 @@
 open Core
-open Lang_def
-open Cfg
+(* open Lang_def
+open Cfg *)
 
 type domain =
   | Top
@@ -61,23 +61,13 @@ let join_values (v1 : domain) (v2 : domain) =
     | (Top, _) | (_, Top) -> Top
     | (Bot, x) -> x
     | (x, Bot) -> x 
-    | (Constant e1, Constant e2) -> if expr_equal i j then Constant e1 else Top
-    | (_, _) -> Top
+    | (Constant e1, Constant e2) -> if expr_equal e1 e2 then Constant e1 else Top
 
 let sigma_ne (state1 : sigma) (state2 : sigma) : bool =
   not (String.Map.equal (dom_equal) state1 state2)
 
 (* reduces an expression to a domain given a state *)
-let reduce (state : sigma) (e : expr) : domain = 
-  (* helper function for reducing binary operators *)
-  let binOpReduce (f : int -> int -> int) (e1, e2) =
-    match (reduce state e1, reduce state e2) with
-      | (Top, _) | (_, Top) -> Top
-      | (Bot, x) -> x
-      | (x, Bot) -> x
-      | (Constant (Const n1), Constant (Const n2)) -> Constant (Const (f n1 n2))
-      | _ -> Bot (* malformed *)
-  in 
+let rec reduce (state : sigma) (e : expr) : domain = 
   match e with
     | Var x -> String.Map.find_exn state x
     | Const n -> Constant e
@@ -88,12 +78,20 @@ let reduce (state : sigma) (e : expr) : domain =
         | Constant re' -> Constant (Lam(y, re')) )
     | App (Lam (y, e'), e'') -> reduce (String.Map.set state ~key:y ~data:(reduce state e'')) e'
     | App (_, _) -> Bot            (* malformed, application must be on lambda *)
-    | Add e' -> binOpReduce (+) e'
-    | Sub e' -> binOpReduce (-) e'
-    | Mul e' -> binOpReduce ( * ) e'
-    | Div e' -> binOpReduce (/) e'
+    | Add (e1, e2) -> binOpReduce state (+) e1 e2
+    | Sub (e1, e2) -> binOpReduce state (-) e1 e2
+    | Mul (e1, e2) -> binOpReduce state ( * ) e1 e2
+    | Div (e1, e2) -> binOpReduce state (/) e1 e2
+(* helper function for reducing binary operators *)
+and binOpReduce state (f : int -> int -> int) e1 e2 =
+    match (reduce state e1, reduce state e2) with 
+      | (Top, _) | (_, Top) -> Top
+      | (Bot, x) -> x
+      | (x, Bot) -> x
+      | (Constant (Const n1), Constant (Const n2)) -> Constant (Const (f n1 n2))
+      | _ -> Bot (* malformed *)
     
-let flow (state : sigma) (code : instr) (e_type : Cfg.edge): sigma =
+let flow (state : sigma) (code : instr) (e_type : edge): sigma =
   match code with
     | Bind (x, e) -> String.Map.set state ~key:x ~data:(
       match e with
