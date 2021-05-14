@@ -142,7 +142,7 @@ let initializeSigma (cfg: t) (value: domain) : sigma =
 (*
   Loops through all the successor edges, computing the flow and adding them to worklist if needed.
  *)
-  let rec next (ns : lineno list) (inputs : df_results) (fl) = function
+let rec next (ns : lineno list) (inputs : df_results) (fl) = function
   | [] -> inputs, ns
   | (j, e)::s ->
     let inputj = Int.Map.find_exn inputs j in
@@ -169,5 +169,5 @@ let kildall (cfg : t) : df_results =
   let botSigma = initializeSigma (cfg) (Bot) in
   let topSigma = initializeSigma (cfg) (Top) in
   let inputMap = Int.Map.map cfg.nodes ~f:(fun k -> botSigma) in
-  let inputMap = Int.Map.set inputMap ~key:1 ~data: topSigma in
+  (* let inputMap = Int.Map.set inputMap ~key:0 ~data: topSigma in *)
   work (inputMap) (List.sort (Int.Map.keys cfg.nodes) ~compare:Int.compare)

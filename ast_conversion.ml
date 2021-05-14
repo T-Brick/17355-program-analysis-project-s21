@@ -71,9 +71,9 @@ let convert_phrase_list ps =
   let init : int * instr Int.Map.t = (0, Int.Map.empty) in
   List.fold_left ps ~init:init ~f:convert_phrase 
 
+let (n, listing) = convert_phrase_list parseTree
+let cfg = of_listing listing
 let () = 
-  let (n, listing) = convert_phrase_list parseTree in 
-  let cfg = of_listing listing in
     kildall cfg
     |> string_of_results
     |> Format.printf "%s\n"
