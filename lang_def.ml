@@ -21,7 +21,6 @@ type expr =
   | Lt of expr * expr         (* e1 < e2 *)
   | IfE of expr * expr * expr (* if e1 then e2 else e3 *)
   (* (* Potential things to add *)
-  | Let of id * expr * expr   (* let x = e1 in e2 *)
   | Letr of id * expr * expr  (* let rec x = e1 in e2 *)
   *)
 
