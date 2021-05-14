@@ -69,7 +69,6 @@ let convert_phrase_list ps =
   let init : int * instr Int.Map.t = (0, Int.Map.empty) in
   List.fold_left ps ~init:init ~f:convert_phrase 
 
-
 (* creates and prints the AST for the ocaml code *)
 let run filename = 
   let s = (In_channel.read_all filename) ^ "\n" ^ "let dummy = -1" in
