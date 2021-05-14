@@ -9,6 +9,11 @@ let pat_to_var p =
     | Ppat_var s -> s.txt
     | _ -> raise (Failure "not handled")
 
+(* converts curried function application to lang expression *)
+let rec curried_application (acc : expr) = function
+  | [(_, arg)] -> App (acc, convert_astexpr arg)
+  | (_, arg)::args -> curried_application (App (acc, convert_astexpr arg)) args
+
 (* convert AST expression to lang expression *)
 let rec convert_astexpr (e : expression) : expr =
   match e.pexp_desc with
@@ -26,7 +31,7 @@ let rec convert_astexpr (e : expression) : expr =
             | (Lident "-", (_, e1)::(_, e2)::_) -> Sub (convert_astexpr e1, convert_astexpr e2)
             | (Lident "*", (_, e1)::(_, e2)::_) -> Mul (convert_astexpr e1, convert_astexpr e2)
             | (Lident "/", (_, e1)::(_, e2)::_) -> Div (convert_astexpr e1, convert_astexpr e2)
-            | (Lident f, [(_, arg)]) -> App (Var f, convert_astexpr arg)
+            | (Lident f, args) -> curried_application (Var f) args
             | _ -> raise (Failure "not handled")
         )
         (* application of lambda *)
