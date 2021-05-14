@@ -81,14 +81,4 @@ let run filename =
       |> Format.printf "%s\n"
 
 
-let _ = run "tests/curry.ml"
-(* let filename = "tests/curry.ml"
-let s = (In_channel.read_all filename) ^ "\n" ^ "let dummy = -1"
-let lexBuf = Lexing.from_string s
-let parseTree = Parse.use_file (lexBuf)
-let (n, listing) = convert_phrase_list parseTree
-let cfg = of_listing listing
-let () = 
-    kildall cfg
-    |> string_of_results
-    |> Format.printf "%s\n" *)
+let _ = run "tests/basic.ml"
