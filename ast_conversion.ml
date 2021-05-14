@@ -2,7 +2,6 @@ open Core
 open Printf
 open Parsetree
 
-
 (* convert pattern to variable *)
 let pat_to_var p =
   match p.ppat_desc with
@@ -58,6 +57,11 @@ and convert_astexpr (e : expression) : expr =
         | Lident "true" -> Bool true
         | Lident "false" -> Bool false
     )
+    (* let expressions *)
+    | Pexp_let (Nonrecursive, [binding], e) ->
+      let id = pat_to_var (binding.pvb_pat) in
+      let exp = convert_astexpr (binding.pvb_expr) in
+      App(Lam (id, convert_astexpr e), exp)
     | _ -> raise (Failure "not handled")
 
 (* convert binding to Bind instr *)
@@ -99,4 +103,4 @@ let run filename =
       |> Format.printf "%s\n"
 
 
-let _ = run "tests/bools.ml"
+let _ = run "tests/lets.ml"
