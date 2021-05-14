@@ -9,8 +9,13 @@ let pat_to_var p =
     | Ppat_var s -> s.txt
     | _ -> raise (Failure "not handled")
 
+(* converts curried function application to lang expression *)
+let rec curried_application (acc : expr) = function
+  | [(_, arg)] -> App (acc, convert_astexpr arg)
+  | (_, arg)::args -> curried_application (App (acc, convert_astexpr arg)) args
+
 (* convert AST expression to lang expression *)
-let rec convert_astexpr (e : expression) : expr =
+and convert_astexpr (e : expression) : expr =
   match e.pexp_desc with
     | Pexp_ident c -> (
       match c.txt with
@@ -26,7 +31,7 @@ let rec convert_astexpr (e : expression) : expr =
             | (Lident "-", (_, e1)::(_, e2)::_) -> Sub (convert_astexpr e1, convert_astexpr e2)
             | (Lident "*", (_, e1)::(_, e2)::_) -> Mul (convert_astexpr e1, convert_astexpr e2)
             | (Lident "/", (_, e1)::(_, e2)::_) -> Div (convert_astexpr e1, convert_astexpr e2)
-            | (Lident f, [(_, arg)]) -> App (Var f, convert_astexpr arg)
+            | (Lident f, args) -> curried_application (Var f) args
             | _ -> raise (Failure "not handled")
         )
         (* application of lambda *)
@@ -62,11 +67,10 @@ let convert_phrase (i, cur_map) : toplevel_phrase -> int * instr Int.Map.t = fun
 (* convert phrase list to instr map *)
 let convert_phrase_list ps =
   let init : int * instr Int.Map.t = (0, Int.Map.empty) in
-  List.fold_left ps ~init:init ~f:convert_phrase 
-
+  List.fold_left ps ~init:init ~f:convert_phrase
 
 (* creates and prints the AST for the ocaml code *)
-let run filename = 
+let run filename =
   let s = (In_channel.read_all filename) ^ "\n" ^ "let dummy = -1" in
   let lexBuf = Lexing.from_string s in
   let parseTree = Parse.use_file (lexBuf) in
@@ -77,14 +81,4 @@ let run filename =
       |> Format.printf "%s\n"
 
 
-let _ = run "tests/curry.ml"
-(* let filename = "tests/curry.ml"
-let s = (In_channel.read_all filename) ^ "\n" ^ "let dummy = -1"
-let lexBuf = Lexing.from_string s
-let parseTree = Parse.use_file (lexBuf)
-let (n, listing) = convert_phrase_list parseTree
-let cfg = of_listing listing
-let () = 
-    kildall cfg
-    |> string_of_results
-    |> Format.printf "%s\n" *)
+let _ = run "tests/basic.ml"
