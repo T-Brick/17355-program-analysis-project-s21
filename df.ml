@@ -102,6 +102,12 @@ let rec reduce (state : sigma) (e : expr) : domain =
         | Bot -> Constant (subst_state state e)
         | Constant re' -> Constant (Lam(y, re')) )
     | App (Lam (y, e'), e'') -> reduce (String.Map.set state ~key:y ~data:(reduce state e'')) e'
+    | App (Var y, e'') -> (
+      match (String.Map.find_exn state y) with
+        | Top -> Top
+        | Bot -> Bot
+        | Constant l -> reduce state (App (l, e''))
+    )
     | App (_, _) -> Bot            (* malformed, application must be on lambda *)
     | Add (e1, e2) -> binOpReduce state (+) e1 e2
     | Sub (e1, e2) -> binOpReduce state (-) e1 e2
