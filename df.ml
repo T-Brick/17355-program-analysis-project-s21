@@ -84,7 +84,7 @@ let rec subst_state (state : sigma) (e : expr) : expr =
         | _ -> e
     )
     | Const n -> e
-    | Lam (y, e') -> Lam (y, subst_state state e')
+    | Lam (y, e') -> Lam (y, subst_state (String.Map.set state ~key:y ~data:Top) e')
     | App (e1, e2) -> App (subst_state state e1, subst_state state e2)
     | Add (e1, e2) -> Add (subst_state state e1, subst_state state e2)
     | Sub (e1, e2) -> Sub (subst_state state e1, subst_state state e2)
@@ -97,16 +97,18 @@ let rec reduce (state : sigma) (e : expr) : domain =
     | Var x -> String.Map.find_exn state x
     | Const n -> Constant e
     | Lam (y, e') -> (
-      match (reduce (String.Map.set state ~key:y ~data:Top) e') with
-        | Top -> Constant (subst_state state e)
-        | Bot -> Constant (subst_state state e)
-        | Constant re' -> Constant (Lam(y, re')) )
+      let state' = (String.Map.set state ~key:y ~data:Top) in
+      match (reduce state' e') with
+        | Top -> Constant (subst_state state' e)
+        | Bot -> Constant (subst_state state' e)
+        | Constant re' -> Constant (Lam(y, re'))
+    )
     | App (Lam (y, e'), e'') -> reduce (String.Map.set state ~key:y ~data:(reduce state e'')) e'
-    | App (Var y, e'') -> (
-      match (String.Map.find_exn state y) with
+    | App (e1, e2) -> (
+      match reduce state e1 with
         | Top -> Top
         | Bot -> Bot
-        | Constant l -> reduce state (App (l, e''))
+        | Constant l -> reduce state (App (l, e2))
     )
     | App (_, _) -> Bot            (* malformed, application must be on lambda *)
     | Add (e1, e2) -> binOpReduce state (+) e1 e2
