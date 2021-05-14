@@ -4,7 +4,7 @@ open Parsetree
 
 (* creates and prints the AST for the ocaml code *)
 let filename = "tests/basic.ml"
-let s = In_channel.read_all filename
+let s = (In_channel.read_all filename) ^ "\n" ^ "let dummy = -1"
 let lexBuf = Lexing.from_string s
 let parseTree = Parse.use_file (lexBuf)
 (* let printer = (fun x -> Pprintast.top_phrase (Format.std_formatter) x ; printf "\n") *)
