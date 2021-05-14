@@ -23,8 +23,8 @@ To run in `utop` simply run the following at the start (make sure that Core is p
 #load "compiler-libs/ocamlcommon.cma";;
 #use "lang_def.ml";;
 #use "cfg.ml";;
-#use "ast_conversion.ml";;
 #use "df.ml";;
+#use "ast_conversion.ml";;
 ```
 
 ## Language Subset

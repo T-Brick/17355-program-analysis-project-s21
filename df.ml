@@ -102,6 +102,12 @@ let rec reduce (state : sigma) (e : expr) : domain =
         | Bot -> Constant (subst_state state e)
         | Constant re' -> Constant (Lam(y, re')) )
     | App (Lam (y, e'), e'') -> reduce (String.Map.set state ~key:y ~data:(reduce state e'')) e'
+    | App (Var y, e'') -> (
+      match (String.Map.find_exn state y) with
+        | Top -> Top
+        | Bot -> Bot
+        | Constant l -> reduce state (App (l, e''))
+    )
     | App (_, _) -> Bot            (* malformed, application must be on lambda *)
     | Add (e1, e2) -> binOpReduce state (+) e1 e2
     | Sub (e1, e2) -> binOpReduce state (-) e1 e2
@@ -142,7 +148,7 @@ let initializeSigma (cfg: t) (value: domain) : sigma =
 (*
   Loops through all the successor edges, computing the flow and adding them to worklist if needed.
  *)
-  let rec next (ns : lineno list) (inputs : df_results) (fl) = function
+let rec next (ns : lineno list) (inputs : df_results) (fl) = function
   | [] -> inputs, ns
   | (j, e)::s ->
     let inputj = Int.Map.find_exn inputs j in
@@ -169,5 +175,5 @@ let kildall (cfg : t) : df_results =
   let botSigma = initializeSigma (cfg) (Bot) in
   let topSigma = initializeSigma (cfg) (Top) in
   let inputMap = Int.Map.map cfg.nodes ~f:(fun k -> botSigma) in
-  let inputMap = Int.Map.set inputMap ~key:1 ~data: topSigma in
+  (* let inputMap = Int.Map.set inputMap ~key:0 ~data: topSigma in *)
   work (inputMap) (List.sort (Int.Map.keys cfg.nodes) ~compare:Int.compare)
