@@ -3,8 +3,9 @@ open Printf
 open Parsetree
 
 (* creates and prints the AST for the ocaml code *)
-let e = "let x = 100 + 50"
-let lexBuf = Lexing.from_string e
+let filename = "tests/basic.ml"
+let s = In_channel.read_all filename
+let lexBuf = Lexing.from_string s
 let parseTree = Parse.use_file (lexBuf)
 let printer = (fun x -> Pprintast.top_phrase (Format.std_formatter) x ; printf "\n")
 let _ = List.map parseTree printer
