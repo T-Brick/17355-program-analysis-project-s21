@@ -4,3 +4,6 @@ let a = f 1
 let b = f 0
 let g = fun y -> if a = 1 then not(true) else not(false)
 let t = id true
+let h = let y = 100 in
+  let x = 49 in
+  y + a + x + b

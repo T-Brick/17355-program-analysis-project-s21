@@ -20,9 +20,6 @@ type expr =
   | Gt of expr * expr         (* e1 > e2 *)
   | Lt of expr * expr         (* e1 < e2 *)
   | IfE of expr * expr * expr (* if e1 then e2 else e3 *)
-  (* (* Potential things to add *)
-  | Letr of id * expr * expr  (* let rec x = e1 in e2 *)
-  *)
 
 type instr =
   | Bind of id * expr
@@ -38,7 +35,7 @@ let rec string_of_expr = function
   | Var v -> Format.sprintf "%s" v
   | Const n -> Format.sprintf "%d" n
   | App (e1, e2) -> Format.sprintf "%s %s" (string_of_expr e1) (string_of_expr e2)
-  | Lam (v, e) -> Format.sprintf "λ%s.%s" v (string_of_expr e)
+  | Lam (v, e) -> Format.sprintf "λ%s.(%s)" v (string_of_expr e)
   | Add (e1, e2) -> Format.sprintf "%s + %s" (string_of_expr e1) (string_of_expr e2)
   | Sub (e1, e2) -> Format.sprintf "%s - %s" (string_of_expr e1) (string_of_expr e2)
   | Mul (e1, e2) -> Format.sprintf "%s * %s" (string_of_expr e1) (string_of_expr e2)

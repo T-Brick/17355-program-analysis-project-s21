@@ -167,8 +167,8 @@ let flow (state : sigma) (code : instr) (e_type : edge): sigma =
         | Sub _   -> reduce state e
         | Mul _   -> reduce state e
         | Div _   -> reduce state e
-        | Bool b  -> Constant e
-        | Not e'  -> reduce state e
+        | Bool _  -> Constant e
+        | Not _  -> reduce state e
         | Eq _    -> reduce state e
         | Gt _    -> reduce state e
         | Lt _    -> reduce state e

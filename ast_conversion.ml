@@ -103,4 +103,4 @@ let run filename =
       |> Format.printf "%s\n"
 
 
-let _ = run "tests/lets.ml"
+(* let _ = run "tests/lets.ml" *)
