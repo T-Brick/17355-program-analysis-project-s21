@@ -90,6 +90,12 @@ let rec subst_state (state : sigma) (e : expr) : expr =
     | Sub (e1, e2) -> Sub (subst_state state e1, subst_state state e2)
     | Mul (e1, e2) -> Mul (subst_state state e1, subst_state state e2)
     | Div (e1, e2) -> Div (subst_state state e1, subst_state state e2)
+    | Bool _ -> e
+    | Not e' -> Not (subst_state state e')
+    | Eq (e1, e2) -> Eq (subst_state state e1, subst_state state e2)
+    | Gt (e1, e2) -> Gt (subst_state state e1, subst_state state e2)
+    | Lt (e1, e2) -> Lt (subst_state state e1, subst_state state e2)
+    | IfE (e1, e2, e3) -> IfE (subst_state state e1, subst_state state e2, subst_state state e3)
 
 (* reduces an expression to a domain given a state *)
 let rec reduce (state : sigma) (e : expr) : domain = 
@@ -111,18 +117,43 @@ let rec reduce (state : sigma) (e : expr) : domain =
         | Constant l -> reduce state (App (l, e2))
     )
     | App (_, _) -> Bot            (* malformed, application must be on lambda *)
-    | Add (e1, e2) -> binOpReduce state (+) e1 e2
-    | Sub (e1, e2) -> binOpReduce state (-) e1 e2
-    | Mul (e1, e2) -> binOpReduce state ( * ) e1 e2
-    | Div (e1, e2) -> binOpReduce state (/) e1 e2
+    | Add (e1, e2) -> binOpIntReduce state (+) e1 e2
+    | Sub (e1, e2) -> binOpIntReduce state (-) e1 e2
+    | Mul (e1, e2) -> binOpIntReduce state ( * ) e1 e2
+    | Div (e1, e2) -> binOpIntReduce state (/) e1 e2
+    | Bool b -> Constant e
+    | Not e' -> (
+      match reduce state e' with
+        | Top -> Top
+        | Bot -> Bot
+        | Constant (Bool b) -> Constant (Bool (not(b)))
+        | Constant re -> Constant (Not re)
+    )
+    | Eq (e1, e2) -> binOpBoolReduce state (Poly.(=)) e1 e2
+    | Gt (e1, e2) -> binOpBoolReduce state (>) e1 e2
+    | Lt (e1, e2) -> binOpBoolReduce state (<) e1 e2
+    | IfE (e1, e2, e3) -> (
+      match reduce state e1 with
+        | Top -> join_values (reduce state e2) (reduce state e3)
+        | Bot -> join_values (reduce state e2) (reduce state e3)
+        | Constant (Bool b) -> if b then reduce state e2 else reduce state e3
+        | _ -> Bot
+    )
 (* helper function for reducing binary operators *)
-and binOpReduce state (f : int -> int -> int) e1 e2 =
+and binOpIntReduce state (f : 'a -> 'a -> 'a) e1 e2 =
     match (reduce state e1, reduce state e2) with 
       | (Top, _) | (_, Top) -> Top
       | (Bot, x) -> x
       | (x, Bot) -> x
       | (Constant (Const n1), Constant (Const n2)) -> Constant (Const (f n1 n2))
       | _ -> Bot (* malformed *)
+and binOpBoolReduce state (f : 'a -> 'a -> bool) e1 e2 =
+      match (reduce state e1, reduce state e2) with 
+        | (Top, _) | (_, Top) -> Top
+        | (Bot, x) -> x
+        | (x, Bot) -> x
+        | (Constant (Const n1), Constant (Const n2)) -> Constant (Bool (f n1 n2))
+        | _ -> Bot (* malformed *)
     
 let flow (state : sigma) (code : instr) (e_type : edge): sigma =
   match code with
@@ -131,11 +162,17 @@ let flow (state : sigma) (code : instr) (e_type : edge): sigma =
         | Var y   -> String.Map.find_exn state y
         | Const _ -> Constant e
         | Lam _   -> reduce state e
-        | App _   -> reduce state e 
-        | Add _   -> reduce state e  
-        | Sub _   -> reduce state e  
-        | Mul _   -> reduce state e  
-        | Div _   -> reduce state e  
+        | App _   -> reduce state e
+        | Add _   -> reduce state e
+        | Sub _   -> reduce state e
+        | Mul _   -> reduce state e
+        | Div _   -> reduce state e
+        | Bool b  -> Constant e
+        | Not e'  -> reduce state e
+        | Eq _    -> reduce state e
+        | Gt _    -> reduce state e
+        | Lt _    -> reduce state e
+        | IfE _   -> reduce state e
       )
 
 (* This initializes a state for the cfg by mapping all variables to the passed in abstract value *)      
@@ -175,7 +212,7 @@ let kildall (cfg : t) : df_results =
   (* This initializes the inputMap, mapping every variable to Top for the first instruction
      in the code/node in the graph, and mapping every variable to Bot for the rest of the nodes. *)
   let botSigma = initializeSigma (cfg) (Bot) in
-  let topSigma = initializeSigma (cfg) (Top) in
+  (* let topSigma = initializeSigma (cfg) (Top) in *)
   let inputMap = Int.Map.map cfg.nodes ~f:(fun k -> botSigma) in
   (* let inputMap = Int.Map.set inputMap ~key:0 ~data: topSigma in *)
   work (inputMap) (List.sort (Int.Map.keys cfg.nodes) ~compare:Int.compare)

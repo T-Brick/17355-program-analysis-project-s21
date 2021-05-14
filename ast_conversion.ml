@@ -17,20 +17,30 @@ let rec curried_application (acc : expr) = function
 (* convert AST expression to lang expression *)
 and convert_astexpr (e : expression) : expr =
   match e.pexp_desc with
+    (* variable *)
     | Pexp_ident c -> (
       match c.txt with
         | Lident v -> Var v
         | _ -> raise (Failure "not handled")
     )
+    (* integer constants *)
     | Pexp_constant (Pconst_integer (ns, _)) -> Const (int_of_string ns)
+    (* function application *)
     | Pexp_apply (e, args) -> (
       match (e.pexp_desc, args) with
         | (Pexp_ident f, _) -> (
           match (f.txt, args) with
+            (* integer operations *)
             | (Lident "+", (_, e1)::(_, e2)::_) -> Add (convert_astexpr e1, convert_astexpr e2)
             | (Lident "-", (_, e1)::(_, e2)::_) -> Sub (convert_astexpr e1, convert_astexpr e2)
             | (Lident "*", (_, e1)::(_, e2)::_) -> Mul (convert_astexpr e1, convert_astexpr e2)
             | (Lident "/", (_, e1)::(_, e2)::_) -> Div (convert_astexpr e1, convert_astexpr e2)
+            (* boolean operations *)
+            | (Lident "not", (_, e1)::_) -> Not (convert_astexpr e1)
+            | (Lident "=", (_, e1)::(_, e2)::_) -> Eq (convert_astexpr e1, convert_astexpr e2)
+            | (Lident ">", (_, e1)::(_, e2)::_) -> Gt (convert_astexpr e1, convert_astexpr e2)
+            | (Lident "<", (_, e1)::(_, e2)::_) -> Lt (convert_astexpr e1, convert_astexpr e2)
+            (* curried function application *)
             | (Lident f, args) -> curried_application (Var f) args
             | _ -> raise (Failure "not handled")
         )
@@ -40,6 +50,14 @@ and convert_astexpr (e : expression) : expr =
       )
     (* lambda value *)
     | Pexp_fun (_, _, p, e) -> Lam (pat_to_var p, convert_astexpr e)
+    (* if then else *)
+    | Pexp_ifthenelse (e1, e2, Some e3)-> IfE (convert_astexpr e1, convert_astexpr e2, convert_astexpr e3)
+    (* booleans *)
+    | Pexp_construct (e, _) -> (
+      match e.txt with
+        | Lident "true" -> Bool true
+        | Lident "false" -> Bool false
+    )
     | _ -> raise (Failure "not handled")
 
 (* convert binding to Bind instr *)
@@ -81,4 +99,4 @@ let run filename =
       |> Format.printf "%s\n"
 
 
-let _ = run "tests/basic.ml"
+let _ = run "tests/bools.ml"
