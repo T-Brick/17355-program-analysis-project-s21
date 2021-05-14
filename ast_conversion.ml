@@ -15,7 +15,7 @@ let rec curried_application (acc : expr) = function
   | (_, arg)::args -> curried_application (App (acc, convert_astexpr arg)) args
 
 (* convert AST expression to lang expression *)
-let rec convert_astexpr (e : expression) : expr =
+and convert_astexpr (e : expression) : expr =
   match e.pexp_desc with
     | Pexp_ident c -> (
       match c.txt with
@@ -67,10 +67,10 @@ let convert_phrase (i, cur_map) : toplevel_phrase -> int * instr Int.Map.t = fun
 (* convert phrase list to instr map *)
 let convert_phrase_list ps =
   let init : int * instr Int.Map.t = (0, Int.Map.empty) in
-  List.fold_left ps ~init:init ~f:convert_phrase 
+  List.fold_left ps ~init:init ~f:convert_phrase
 
 (* creates and prints the AST for the ocaml code *)
-let run filename = 
+let run filename =
   let s = (In_channel.read_all filename) ^ "\n" ^ "let dummy = -1" in
   let lexBuf = Lexing.from_string s in
   let parseTree = Parse.use_file (lexBuf) in
