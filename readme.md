@@ -27,6 +27,10 @@ To run in `utop` simply run the following at the start (make sure that Core is p
 #use "ast_conversion.ml";;
 ```
 
+You can then simply apply `run filepath` to evaluate a specific file. This adds a dummy binding in the last state, which is used to print out the last state of the flow.
+
 ## Language Subset
 Currently, we only handle OCaml programs that take the form of multiple
-`let` declarations in a row, which bind singular variables. As for expressions, we only handle constants, integer variables, basic integer operations (addition, subtraction, multiplication, division), lambda values that take in a singular variable argument, and application of such lambda values.
+`let` declarations in a row, which bind singular variables. As for expressions, we only handle constants, integer variables, basic integer operations (addition, subtraction, multiplication, division), lambda values that take in a singular variable argument, application of such lambda values, and some basic boolean operations (not, equals, greater than, less than, if then else).
+
+The simplified AST can be found in `lang_def.ml`.
