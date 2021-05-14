@@ -2,13 +2,6 @@ open Core
 open Printf
 open Parsetree
 
-(* creates and prints the AST for the ocaml code *)
-let filename = "tests/basic.ml"
-let s = (In_channel.read_all filename) ^ "\n" ^ "let dummy = -1"
-let lexBuf = Lexing.from_string s
-let parseTree = Parse.use_file (lexBuf)
-(* let printer = (fun x -> Pprintast.top_phrase (Format.std_formatter) x ; printf "\n") *)
-(* let _ = List.map parseTree printer *)
 
 (* convert pattern to variable *)
 let pat_to_var p =
@@ -71,9 +64,27 @@ let convert_phrase_list ps =
   let init : int * instr Int.Map.t = (0, Int.Map.empty) in
   List.fold_left ps ~init:init ~f:convert_phrase 
 
+
+(* creates and prints the AST for the ocaml code *)
+let run filename = 
+  let s = (In_channel.read_all filename) ^ "\n" ^ "let dummy = -1" in
+  let lexBuf = Lexing.from_string s in
+  let parseTree = Parse.use_file (lexBuf) in
+  let (n, listing) = convert_phrase_list parseTree in
+  let cfg = of_listing listing in
+    kildall cfg
+      |> string_of_results
+      |> Format.printf "%s\n"
+
+
+let _ = run "tests/curry.ml"
+(* let filename = "tests/curry.ml"
+let s = (In_channel.read_all filename) ^ "\n" ^ "let dummy = -1"
+let lexBuf = Lexing.from_string s
+let parseTree = Parse.use_file (lexBuf)
 let (n, listing) = convert_phrase_list parseTree
 let cfg = of_listing listing
 let () = 
     kildall cfg
     |> string_of_results
-    |> Format.printf "%s\n"
+    |> Format.printf "%s\n" *)
