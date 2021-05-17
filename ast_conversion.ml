@@ -2,16 +2,19 @@ open Core
 open Printf
 open Parsetree
 
+exception Unsupported of string
+
 (* convert pattern to variable *)
 let pat_to_var p =
   match p.ppat_desc with
-    | Ppat_var s -> s.txt
-    | _ -> raise (Failure "not handled")
+    | Ppat_var s  -> s.txt
+    | _           -> "?"
 
 (* converts curried function application to lang expression *)
 let rec curried_application (acc : expr) = function
-  | [(_, arg)] -> App (acc, convert_astexpr arg)
-  | (_, arg)::args -> curried_application (App (acc, convert_astexpr arg)) args
+  | []              -> UnknownExpr (* function applied to nothing *)
+  | [(_, arg)]      -> App (acc, convert_astexpr arg)
+  | (_, arg)::args  -> curried_application (App (acc, convert_astexpr arg)) args
 
 (* convert AST expression to lang expression *)
 and convert_astexpr (e : expression) : expr =
@@ -19,8 +22,8 @@ and convert_astexpr (e : expression) : expr =
     (* variable *)
     | Pexp_ident c -> (
       match c.txt with
-        | Lident v -> Var v
-        | _ -> raise (Failure "not handled")
+        | Lident v  -> Var v
+        | _         -> UnknownExpr
     )
     (* integer constants *)
     | Pexp_constant (Pconst_integer (ns, _)) -> Const (int_of_string ns)
@@ -35,17 +38,17 @@ and convert_astexpr (e : expression) : expr =
             | (Lident "*", (_, e1)::(_, e2)::_) -> Mul (convert_astexpr e1, convert_astexpr e2)
             | (Lident "/", (_, e1)::(_, e2)::_) -> Div (convert_astexpr e1, convert_astexpr e2)
             (* boolean operations *)
-            | (Lident "not", (_, e1)::_) -> Not (convert_astexpr e1)
+            | (Lident "not", (_, e1)::_)        -> Not (convert_astexpr e1)
             | (Lident "=", (_, e1)::(_, e2)::_) -> Eq (convert_astexpr e1, convert_astexpr e2)
             | (Lident ">", (_, e1)::(_, e2)::_) -> Gt (convert_astexpr e1, convert_astexpr e2)
             | (Lident "<", (_, e1)::(_, e2)::_) -> Lt (convert_astexpr e1, convert_astexpr e2)
             (* curried function application *)
-            | (Lident f, args) -> curried_application (Var f) args
-            | _ -> raise (Failure "not handled")
+            | (Lident f, args)  -> curried_application (Var f) args
+            | _                 -> UnknownExpr
         )
         (* application of lambda *)
         | (Pexp_fun _, [(_, arg)]) -> App (convert_astexpr e, convert_astexpr arg)
-        | _ -> raise (Failure "not handled")
+        | _ -> UnknownExpr
       )
     (* lambda value *)
     | Pexp_fun (_, _, p, e) -> Lam (pat_to_var p, convert_astexpr e)
@@ -54,15 +57,16 @@ and convert_astexpr (e : expression) : expr =
     (* booleans *)
     | Pexp_construct (e, _) -> (
       match e.txt with
-        | Lident "true" -> Bool true
-        | Lident "false" -> Bool false
+        | Lident "true"   -> Bool true
+        | Lident "false"  -> Bool false
+        | _               -> UnknownExpr
     )
     (* let expressions *)
     | Pexp_let (Nonrecursive, [binding], e) ->
       let id = pat_to_var (binding.pvb_pat) in
       let exp = convert_astexpr (binding.pvb_expr) in
       App(Lam (id, convert_astexpr e), exp)
-    | _ -> raise (Failure "not handled")
+    | _ -> UnknownExpr
 
 (* convert binding to Bind instr *)
 let convert_binding (b : value_binding) : instr =
@@ -72,8 +76,8 @@ let convert_binding (b : value_binding) : instr =
   
 (* convert structure_item_desc to instr *)
 let convert_struct_item_desc : structure_item_desc -> instr = function
-  | Pstr_value (Nonrecursive, [binding]) -> convert_binding binding
-  | _ -> raise (Failure "not handled")
+  | Pstr_value (Nonrecursive, [binding])  -> convert_binding binding
+  | _                                     -> UnknownDec
 
 (* add structure_item to accumulator *)
 let convert_struct_item (i, cur_map) (s : structure_item) : lineno * instr Int.Map.t =
@@ -84,7 +88,7 @@ let convert_struct_item (i, cur_map) (s : structure_item) : lineno * instr Int.M
 (* convert phrase to instr map *)
 let convert_phrase (i, cur_map) : toplevel_phrase -> int * instr Int.Map.t = function
   | Ptop_def s -> List.fold_left s ~init:(i, cur_map) ~f:convert_struct_item
-  | Ptop_dir _ -> raise (Failure "not handled")
+  | Ptop_dir _ -> raise (Unsupported "Directives")
 
 (* convert phrase list to instr map *)
 let convert_phrase_list ps =
@@ -101,6 +105,3 @@ let run filename =
     kildall cfg
       |> string_of_results
       |> Format.printf "%s\n"
-
-
-(* let _ = run "tests/lets.ml" *)

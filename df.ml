@@ -8,16 +8,16 @@ type domain =
   | Constant of expr
 
 let string_of_dom = function
-  | Top -> "Top"
-  | Bot -> "Bot"
-  | Constant e -> string_of_expr e
+  | Top         -> "Top"
+  | Bot         -> "Bot"
+  | Constant e  -> string_of_expr e
 
 let dom_equal d1 d2 =
   match (d1, d2) with
-    | (Top, Top) -> true
-    | (Bot, Bot) -> true
-    | (Constant e1, Constant e2) -> expr_equal e1 e2
-    | _ -> false
+    | (Top, Top)                  -> true
+    | (Bot, Bot)                  -> true
+    | (Constant e1, Constant e2)  -> expr_equal e1 e2
+    | _                           -> false
 
 type sigma = domain String.Map.t
 
@@ -41,8 +41,8 @@ let string_of_results_listing listing results =
   let show_instr ~key:loc ~data:instr collected =
     let result =
       match Int.Map.find results loc with
-      | None -> "[ ]"
-      | Some sigma -> string_of_sigma sigma
+      | None        -> "[ ]"
+      | Some sigma  -> string_of_sigma sigma
     in
     Format.sprintf "%s\n%s\n%s" collected result (string_of_instr loc instr)
   in
@@ -51,23 +51,24 @@ let string_of_results_listing listing results =
 (* lifts expressions to the domain *)
 let alpha (n : expr) : domain = 
   match n with
-    | Const i -> Constant n
-    | Lam (x, e) -> Constant n
-    | Var x -> Bot (* uncertain about these last two, double check later *)
-    | _ -> Top
+    | UnknownExpr -> Top
+    | Const _     -> Constant n
+    | Bool _      -> Constant n
+    | Lam (_, _)  -> Constant n
+    | Var x       -> Bot
+    | _           -> Top
   
 let join_values (v1 : domain) (v2 : domain) =
   match (v1, v2) with
-    | (Top, _) | (_, Top) -> Top
-    | (Bot, x) -> x
-    | (x, Bot) -> x 
-    | (Constant e1, Constant e2) -> if expr_equal e1 e2 then Constant e1 else Top
+    | (Top, _) | (_, Top)         -> Top
+    | (Bot, x) | (x, Bot)         -> x 
+    | (Constant e1, Constant e2)  -> if expr_equal e1 e2 then Constant e1 else Top
 
 let join (s1 : sigma) (s2 : sigma) : sigma =
   String.Map.merge s1 s2 
     ~f:(fun ~key:_ -> function
-    | `Left _ | `Right _ -> failwith "States contain different number of variables!"
-    | `Both (v1, v2) -> Some (join_values v1 v2))
+    | `Left _ | `Right _  -> failwith "States contain different number of variables!"
+    | `Both (v1, v2)      -> Some (join_values v1 v2))
 
 let sigma_ne (state1 : sigma) (state2 : sigma) : bool =
   not (String.Map.equal (dom_equal) state1 state2)
@@ -78,105 +79,107 @@ let (!=) = sigma_ne
   later wont make certain functions equal when they shouldn't be *)
 let rec subst_state (state : sigma) (e : expr) : expr =
   match e with
-    | Var x -> (
+    | UnknownExpr -> e
+    | Var x       -> (
       match String.Map.find state x with
-        | Some (Constant e') -> e'
-        | _ -> e
+        | Some (Constant e')  -> e'
+        | _                   -> e
     )
-    | Const n -> e
-    | Lam (y, e') -> Lam (y, subst_state (String.Map.set state ~key:y ~data:Top) e')
-    | App (e1, e2) -> (
+    | Const _       -> e
+    | Lam (y, e')   -> Lam (y, subst_state (String.Map.set state ~key:y ~data:Top) e')
+    | App (e1, e2)  -> (
       match subst_state state e1 with
         | Lam (y, e') -> subst_state (String.Map.set state ~key:y ~data:(Constant (subst_state state e2))) e'
-        | e1' -> App (e1', subst_state state e2)
+        | e1'         -> App (e1', subst_state state e2)
     )
-    | Add (e1, e2) -> Add (subst_state state e1, subst_state state e2)
-    | Sub (e1, e2) -> Sub (subst_state state e1, subst_state state e2)
-    | Mul (e1, e2) -> Mul (subst_state state e1, subst_state state e2)
-    | Div (e1, e2) -> Div (subst_state state e1, subst_state state e2)
-    | Bool _ -> e
-    | Not e' -> Not (subst_state state e')
-    | Eq (e1, e2) -> Eq (subst_state state e1, subst_state state e2)
-    | Gt (e1, e2) -> Gt (subst_state state e1, subst_state state e2)
-    | Lt (e1, e2) -> Lt (subst_state state e1, subst_state state e2)
-    | IfE (e1, e2, e3) -> IfE (subst_state state e1, subst_state state e2, subst_state state e3)
+    | Add (e1, e2)      -> Add (subst_state state e1, subst_state state e2)
+    | Sub (e1, e2)      -> Sub (subst_state state e1, subst_state state e2)
+    | Mul (e1, e2)      -> Mul (subst_state state e1, subst_state state e2)
+    | Div (e1, e2)      -> Div (subst_state state e1, subst_state state e2)
+    | Bool _            -> e
+    | Not e'            -> Not (subst_state state e')
+    | Eq (e1, e2)       -> Eq (subst_state state e1, subst_state state e2)
+    | Gt (e1, e2)       -> Gt (subst_state state e1, subst_state state e2)
+    | Lt (e1, e2)       -> Lt (subst_state state e1, subst_state state e2)
+    | IfE (e1, e2, e3)  -> IfE (subst_state state e1, subst_state state e2, subst_state state e3)
 
 (* reduces an expression to a domain given a state *)
 let rec reduce (state : sigma) (e : expr) : domain = 
   match e with
-    | Var x -> String.Map.find_exn state x
-    | Const n -> Constant e
+    | UnknownExpr -> Top
+    | Var x       -> String.Map.find_exn state x
+    | Const _     -> Constant e
     | Lam (y, e') -> (
       let state' = (String.Map.set state ~key:y ~data:Top) in
       match (reduce state' e') with
-        | Top -> Constant (subst_state state' e)
-        | Bot -> Constant (subst_state state' e)
-        | Constant re' -> Constant (Lam(y, re'))
+        | Top           -> Constant (subst_state state' e)
+        | Bot           -> Constant (subst_state state' e)
+        | Constant re'  -> Constant (Lam(y, re'))
     )
     | App (Lam (y, e'), e'') -> reduce (String.Map.set state ~key:y ~data:(reduce state e'')) e'
     | App (e1, e2) -> (
       match reduce state e1 with
-        | Top -> Top
-        | Bot -> Bot
-        | Constant l -> reduce state (App (l, e2))
+        | Top         -> Top
+        | Bot         -> Bot
+        | Constant l  -> reduce state (App (l, e2))
     )
-    | Add (e1, e2) -> binOpIntReduce state (+) e1 e2
-    | Sub (e1, e2) -> binOpIntReduce state (-) e1 e2
-    | Mul (e1, e2) -> binOpIntReduce state ( * ) e1 e2
-    | Div (e1, e2) -> binOpIntReduce state (/) e1 e2
-    | Bool b -> Constant e
-    | Not e' -> (
+    | Add (e1, e2)  -> binOpIntReduce state (+) e1 e2
+    | Sub (e1, e2)  -> binOpIntReduce state (-) e1 e2
+    | Mul (e1, e2)  -> binOpIntReduce state ( * ) e1 e2
+    | Div (e1, e2)  -> binOpIntReduce state (/) e1 e2
+    | Bool _        -> Constant e
+    | Not e'        -> (
       match reduce state e' with
-        | Top -> Top
-        | Bot -> Bot
+        | Top               -> Top
+        | Bot               -> Bot
         | Constant (Bool b) -> Constant (Bool (not(b)))
-        | Constant re -> Constant (Not re)
+        | Constant re       -> Constant (Not re)
     )
-    | Eq (e1, e2) -> binOpBoolReduce state (Poly.(=)) e1 e2
-    | Gt (e1, e2) -> binOpBoolReduce state (>) e1 e2
-    | Lt (e1, e2) -> binOpBoolReduce state (<) e1 e2
-    | IfE (e1, e2, e3) -> (
+    | Eq (e1, e2)       -> binOpBoolReduce state (Poly.(=)) e1 e2
+    | Gt (e1, e2)       -> binOpBoolReduce state (>) e1 e2
+    | Lt (e1, e2)       -> binOpBoolReduce state (<) e1 e2
+    | IfE (e1, e2, e3)  -> (
       match reduce state e1 with
-        | Top -> join_values (reduce state e2) (reduce state e3)
-        | Bot -> join_values (reduce state e2) (reduce state e3)
+        | Top               -> join_values (reduce state e2) (reduce state e3)
+        | Bot               -> join_values (reduce state e2) (reduce state e3)
         | Constant (Bool b) -> if b then reduce state e2 else reduce state e3
-        | _ -> Bot
+        | _                 -> Bot
     )
 (* helper function for reducing binary operators *)
 and binOpIntReduce state (f : 'a -> 'a -> 'a) e1 e2 =
     match (reduce state e1, reduce state e2) with 
-      | (Top, _) | (_, Top) -> Top
-      | (Bot, x) -> x
-      | (x, Bot) -> x
-      | (Constant (Const n1), Constant (Const n2)) -> Constant (Const (f n1 n2))
+      | (Top, _) | (_, Top)                         -> Top
+      | (Bot, x) | (x, Bot)                         -> x
+      | (Constant (Const n1), Constant (Const n2))  -> Constant (Const (f n1 n2))
       | _ -> Bot (* malformed *)
 and binOpBoolReduce state (f : 'a -> 'a -> bool) e1 e2 =
       match (reduce state e1, reduce state e2) with 
-        | (Top, _) | (_, Top) -> Top
-        | (Bot, x) -> x
-        | (x, Bot) -> x
-        | (Constant (Const n1), Constant (Const n2)) -> Constant (Bool (f n1 n2))
+        | (Top, _) | (_, Top)                         -> Top
+        | (Bot, x) | (x, Bot)                         -> x
+        | (Constant (Const n1), Constant (Const n2))  -> Constant (Bool (f n1 n2))
         | _ -> Bot (* malformed *)
     
 let flow (state : sigma) (code : instr) (e_type : edge): sigma =
   match code with
     | Bind (x, e) -> String.Map.set state ~key:x ~data:(
       match e with
-        | Var y   -> String.Map.find_exn state y
-        | Const _ -> Constant e
-        | Lam _   -> reduce state e
-        | App _   -> reduce state e
-        | Add _   -> reduce state e
-        | Sub _   -> reduce state e
-        | Mul _   -> reduce state e
-        | Div _   -> reduce state e
-        | Bool _  -> Constant e
-        | Not _  -> reduce state e
-        | Eq _    -> reduce state e
-        | Gt _    -> reduce state e
-        | Lt _    -> reduce state e
-        | IfE _   -> reduce state e
+        | UnknownExpr -> Top
+        | Var y       -> String.Map.find_exn state y
+        | Const _     -> Constant e
+        | Lam _       -> reduce state e
+        | App _       -> reduce state e
+        | Add _       -> reduce state e
+        | Sub _       -> reduce state e
+        | Mul _       -> reduce state e
+        | Div _       -> reduce state e
+        | Bool _      -> Constant e
+        | Not _       -> reduce state e
+        | Eq _        -> reduce state e
+        | Gt _        -> reduce state e
+        | Lt _        -> reduce state e
+        | IfE _       -> reduce state e
       )
+    | UnknownDec -> state
 
 (* This initializes a state for the cfg by mapping all variables to the passed in abstract value *)      
 let initializeSigma (cfg: t) (value: domain) : sigma = 
@@ -184,6 +187,7 @@ let initializeSigma (cfg: t) (value: domain) : sigma =
   let add_var (s) (n) =
     match (Int.Map.find_exn cfg.nodes n) with
     | Bind (x, _) -> String.Map.set s ~key:x ~data:value
+    | UnknownDec  -> s
   in
   List.fold nodes ~init:(String.Map.empty) ~f:(add_var)
 

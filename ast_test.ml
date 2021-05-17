@@ -2,7 +2,7 @@ open Core
 open Printf
 
 (* prints the AST for the ocaml code *)
-let filename = "tests/lets.ml"
+let filename = "tests/basic.ml"
 let s = (In_channel.read_all filename) ^ "\n" ^ "let dummy = -1"
 let lexBuf = Lexing.from_string s
 let parseTree = Parse.use_file (lexBuf)
