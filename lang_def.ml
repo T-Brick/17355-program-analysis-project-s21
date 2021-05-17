@@ -34,7 +34,7 @@ let rec string_of_expr = function
   | UnknownExpr       -> Format.sprintf "?"
   | Var v             -> Format.sprintf "%s" v
   | Const n           -> Format.sprintf "%d" n
-  | App (e1, e2)      -> Format.sprintf "%s %s" (string_of_expr e1) (string_of_expr e2)
+  | App (e1, e2)      -> Format.sprintf "%s (%s)" (string_of_expr e1) (string_of_expr e2)
   | Lam (v, e)        -> Format.sprintf "λ%s.(%s)" v (string_of_expr e)
   | Add (e1, e2)      -> Format.sprintf "%s + %s" (string_of_expr e1) (string_of_expr e2)
   | Sub (e1, e2)      -> Format.sprintf "%s - %s" (string_of_expr e1) (string_of_expr e2)
