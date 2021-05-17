@@ -95,13 +95,17 @@ let convert_phrase_list ps =
   let init : int * instr Int.Map.t = (0, Int.Map.empty) in
   List.fold_left ps ~init:init ~f:convert_phrase
 
-(* creates and prints the AST for the ocaml code *)
-let run filename =
+(* takes in an input file, runs, and returns the result *)
+let run_results filename = 
   let s = (In_channel.read_all filename) ^ "\n" ^ "let dummy = -1" in
   let lexBuf = Lexing.from_string s in
   let parseTree = Parse.use_file (lexBuf) in
   let (n, listing) = convert_phrase_list parseTree in
   let cfg = of_listing listing in
     kildall cfg
-      |> string_of_results
-      |> Format.printf "%s\n"
+
+(* takes in an input file, runs, and then prints the analysis *)
+let run filename =
+  run_results filename
+    |> string_of_results
+    |> Format.printf "%s\n"
