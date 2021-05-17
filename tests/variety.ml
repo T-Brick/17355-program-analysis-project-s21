@@ -7,3 +7,4 @@ let t = id true
 let h = let y = 100 in
   let x = 49 in
   y + a + x + b
+let f' = fun x -> let y = 100 in x + y

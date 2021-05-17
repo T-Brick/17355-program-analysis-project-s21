@@ -85,7 +85,11 @@ let rec subst_state (state : sigma) (e : expr) : expr =
     )
     | Const n -> e
     | Lam (y, e') -> Lam (y, subst_state (String.Map.set state ~key:y ~data:Top) e')
-    | App (e1, e2) -> App (subst_state state e1, subst_state state e2)
+    | App (e1, e2) -> (
+      match subst_state state e1 with
+        | Lam (y, e') -> subst_state (String.Map.set state ~key:y ~data:(Constant (subst_state state e2))) e'
+        | e1' -> App (e1', subst_state state e2)
+    )
     | Add (e1, e2) -> Add (subst_state state e1, subst_state state e2)
     | Sub (e1, e2) -> Sub (subst_state state e1, subst_state state e2)
     | Mul (e1, e2) -> Mul (subst_state state e1, subst_state state e2)
@@ -116,7 +120,6 @@ let rec reduce (state : sigma) (e : expr) : domain =
         | Bot -> Bot
         | Constant l -> reduce state (App (l, e2))
     )
-    | App (_, _) -> Bot            (* malformed, application must be on lambda *)
     | Add (e1, e2) -> binOpIntReduce state (+) e1 e2
     | Sub (e1, e2) -> binOpIntReduce state (-) e1 e2
     | Mul (e1, e2) -> binOpIntReduce state ( * ) e1 e2
